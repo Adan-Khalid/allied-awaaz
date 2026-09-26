@@ -1,0 +1,55 @@
+name: verify
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: awaaz, POSTGRES_PASSWORD: awaaz, POSTGRES_DB: awaaz_test }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U awaaz" --health-interval 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: console/package-lock.json }
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y mosquitto mosquitto-clients g++ && sudo systemctl stop mosquitto || true
+      - name: Python packages
+        run: |
+          pip install -r backend/requirements.txt -r scripts/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: PlatformIO cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('firmware/platformio.ini') }}
+      - name: Verify (strict)
+        env:
+          AWAAZ_TEST_DATABASE_URL: postgresql+psycopg://awaaz:awaaz@localhost:5432/awaaz_test
+        run: scripts/verify.sh --strict
+
+  docker:
+    # CLAUDE.md section 3: the Docker path must bring up the full stack.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare .env and broker passwords
+        run: |
+          cp .env.example .env
+          docker run --rm -v "$PWD/infra/mosquitto:/m" eclipse-mosquitto:2 sh -c \
+            "mosquitto_passwd -b -c /m/passwd awaaz-backend change-me-mqtt-backend && mosquitto_passwd -b /m/passwd awz-demo-001 device-mqtt-password"
+      - name: Build and start stack
+        run: docker compose up --build -d
+      - name: Health check
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:8000/healthz && curl -fs -o /dev/null http://localhost:3000/login; then echo; echo STACK_OK; exit 0; fi
+            sleep 2
+          done
+          docker compose ps; docker compose logs --tail 80; exit 1
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

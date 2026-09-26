@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: awaaz
+      POSTGRES_PASSWORD: awaaz
+      POSTGRES_DB: awaaz
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U awaaz"]
+      interval: 3s
+      retries: 20
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./infra/mosquitto/acl:/mosquitto/config/acl:ro
+      - ./infra/mosquitto/passwd:/mosquitto/config/passwd:ro
+
+  backend:
+    build: ./backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      mosquitto: { condition: service_started }
+    env_file: .env
+    environment:
+      AWAAZ_DATABASE_URL: postgresql+psycopg://awaaz:awaaz@postgres:5432/awaaz
+      AWAAZ_MQTT_HOST: mosquitto
+    ports: ["8000:8000"]
+
+  console:
+    build:
+      context: ./console
+      args:
+        # The browser calls the backend directly, so this must be reachable from the demo laptop.
+        NEXT_PUBLIC_API_BASE: http://localhost:8000
+    depends_on: [backend]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:

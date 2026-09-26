@@ -1,0 +1,8 @@
+# Backend: publish device events, read presence.
+user awaaz-backend
+topic write awaaz/v1/dev/+/evt
+topic read awaaz/v1/dev/+/status
+
+# Every device (username = device id) can only read its own events and write its own presence.
+pattern read awaaz/v1/dev/%u/evt
+pattern write awaaz/v1/dev/%u/status

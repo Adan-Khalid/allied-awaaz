@@ -1,0 +1,5 @@
+# Acceptance tooling (virtual terminal, live e2e, console e2e)
+httpx>=0.27
+paho-mqtt>=2.1
+playwright>=1.47
+platformio>=6.1

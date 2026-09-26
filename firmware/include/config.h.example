@@ -1,0 +1,20 @@
+#pragma once
+// Copy to config.h (git-ignored). Values for DEVICE_* come from tools/provision_device.py.
+
+#define WIFI_SSID        "your-wifi"
+#define WIFI_PASSWORD    "your-password"
+
+// Backend base URL (no trailing slash). Use https:// plus ROOT_CA in a pilot.
+#define API_BASE         "http://192.168.1.50:8000"
+#define MQTT_HOST        "192.168.1.50"
+#define MQTT_PORT        1883
+
+#define DEVICE_ID        "awz-demo-001"
+#define DEVICE_SECRET    "dev-device-secret-001"   // must equal AWAAZ_DEMO_DEVICE_SECRET
+#define MQTT_PASSWORD    "device-mqtt-password"
+
+#define MAX_CLOCK_SKEW_S 300
+#define MAX_RECORD_S     6
+
+// Optional PEM root CA for HTTPS; leave empty for plain HTTP on a closed demo LAN.
+#define ROOT_CA ""

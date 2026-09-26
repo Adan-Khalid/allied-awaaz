@@ -1,0 +1,8 @@
+.env
+infra/mosquitto/passwd
+firmware/include/config.h
+firmware/.pio/
+__pycache__/
+*.db
+.pytest_cache/
+node_modules/
