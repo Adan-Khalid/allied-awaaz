@@ -1,7 +1,16 @@
 # Allied Awaaz
 
+[![verify](https://github.com/Adan-Khalid/allied-awaaz/actions/workflows/verify.yml/badge.svg)](https://github.com/Adan-Khalid/allied-awaaz/actions/workflows/verify.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![Next.js](https://img.shields.io/badge/console-Next.js-black)
+![ESP32-S3](https://img.shields.io/badge/firmware-ESP32--S3-red)
+
 Agentic, voice-first merchant banking terminal for the 5th Allied Bank Fintech Hackathon 2026
 (theme: Agentic AI for Banking, Early Stage).
+
+> **Proof of concept.** The payment gateway is **simulated**. This is not a Raast or Allied Bank
+> integration, and it is not production banking software.
 
 * **Payment Exception Agent** on the counter: voice or keypad QR requests, bank-verified Urdu
   announcements, and instant resolution of "customer says he paid" disputes.
@@ -100,3 +109,12 @@ The firmware compiles cleanly for ESP32-S3 (RAM 14.7%, flash 15.6%). It has not 
 | 6 | Console: run activation sweep, open a DECLINING merchant, approve WhatsApp as supervisor | Draft shows evidence; RM token gets 403, supervisor approves; audit shows who and when |
 
 Rehearse on a closed Wi-Fi hotspot. Keep keypad entry ready as the fallback for every voice step.
+
+## Contributing
+
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first; security
+reports go through [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)

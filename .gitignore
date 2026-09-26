@@ -6,3 +6,8 @@ __pycache__/
 *.db
 .pytest_cache/
 node_modules/
+
+# Local tooling and build output
+.venv/
+console/.next/
+*.tsbuildinfo
