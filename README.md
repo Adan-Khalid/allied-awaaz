@@ -29,8 +29,8 @@ backend/    FastAPI service: payments, agents, simulator, console API, 50 tests
 console/    Next.js bank console: merchants, approvals, disputes, agent reasoning, audit
 firmware/   ESP32-S3 terminal (PlatformIO, Arduino core)
 infra/      Mosquitto config and ACLs
-tools/      virtual terminal, clip library builder, golden-file generator, device provisioning
-scripts/    verify.sh (one-command acceptance), live and browser end-to-end tests, local broker
+tools/      laptop terminal, virtual terminal, clip library builder, golden-file generator, device provisioning
+scripts/    verify.sh (one-command acceptance), laptop_demo.py, end-to-end tests, local broker
 docs/       FINAL_GUIDE.md (start here), ARCHITECTURE.md
 ```
 
@@ -58,7 +58,38 @@ Tests:
 cd backend && python -m pytest -q
 ```
 
-## Drive it without hardware
+## Laptop terminal (no hardware needed)
+
+Version 1 runs the counter terminal on a laptop. The laptop screen is the terminal display, the
+keyboard is the keypad, the laptop mic is push-to-talk and the speakers play the same Urdu clip
+library as the device. One command starts the backend, a local MQTT broker (when Mosquitto is
+installed) and the terminal, then opens it in the browser:
+
+```bash
+pip install -r backend/requirements.txt -r tools/laptop_terminal/requirements.txt
+python scripts/laptop_demo.py              # add --console for the bank console on :3000
+```
+
+On Windows you can double-click `scripts/laptop_demo.bat` instead (the first run sets up `.venv`).
+
+| Device part | Laptop stand-in |
+|-------------|-----------------|
+| 2.8" TFT screen | the terminal screen in the browser (same 240x320 layouts as `firmware/src/ui.cpp`) |
+| 4x4 keypad | on-screen keys, or keyboard: `0-9`, `Enter` = #, `Backspace`/`Esc` = *, `A` `B` `C` `D` |
+| Push-to-talk mic | hold **Space** or the mic button; Chrome/Edge Urdu speech, or the bank STT |
+| Speaker | laptop speakers, playing `firmware/data/clips/*.wav` |
+| Green LED | the LED dot beside the keypad |
+
+The terminal process (`tools/laptop_terminal/server.py`) is the device. It keeps the device secret,
+signs every request, and announces a payment only from an HMAC-verified, fresh, in-sequence MQTT
+message or its own signed status read, exactly like the firmware. The browser page only draws and
+plays sound, and it listens on `127.0.0.1` only. QR links use the laptop's LAN IP, so a phone on the
+same Wi-Fi can scan and pay on the simulated payer page.
+
+To point the terminal at a stack you already run (for example `docker compose up`):
+`python scripts/laptop_demo.py --no-backend --api http://localhost:8000`.
+
+## Drive it without hardware (scripted)
 
 ```python
 # backend/scripts: signed request helper (same scheme as the firmware)
