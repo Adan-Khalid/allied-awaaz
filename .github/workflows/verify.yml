@@ -10,10 +10,10 @@ jobs:
         ports: ["5432:5432"]
         options: --health-cmd "pg_isready -U awaaz" --health-interval 3s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: "22", cache: npm, cache-dependency-path: console/package-lock.json }
       - name: System packages
         run: sudo apt-get update && sudo apt-get install -y mosquitto mosquitto-clients g++ && sudo systemctl stop mosquitto || true
@@ -22,7 +22,7 @@ jobs:
           pip install -r backend/requirements.txt -r scripts/requirements.txt
           python -m playwright install --with-deps chromium
       - name: PlatformIO cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.platformio
           key: pio-${{ hashFiles('firmware/platformio.ini') }}
@@ -32,10 +32,10 @@ jobs:
         run: scripts/verify.sh --strict
 
   docker:
-    # CLAUDE.md section 3: the Docker path must bring up the full stack.
+    # The documented Docker path must bring up the full stack.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Prepare .env and broker passwords
         run: |
           cp .env.example .env
@@ -53,3 +53,22 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+
+  laptop-terminal:
+    # Version 1 terminal on a laptop: QR -> simulated payment -> verified announcement.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.12" }
+      - name: Packages
+        run: |
+          sudo apt-get update && sudo apt-get install -y mosquitto && sudo systemctl stop mosquitto || true
+          pip install -r backend/requirements.txt -r tools/laptop_terminal/requirements.txt
+      - name: Start laptop demo (backend + broker + terminal)
+        run: |
+          python scripts/laptop_demo.py --no-browser > demo.log 2>&1 &
+          for i in $(seq 1 60); do grep -q "Ready" demo.log && break; sleep 2; done
+          cat demo.log
+      - name: Smoke test
+        run: python scripts/smoke_laptop_terminal.py
