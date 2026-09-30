@@ -18,7 +18,7 @@ Agentic, voice-first merchant banking terminal for the 5th Allied Bank Fintech H
   human approval on every action.
 
 **Start with [docs/FINAL_GUIDE.md](docs/FINAL_GUIDE.md).** Architecture, security model and decisions:
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Instructions for Claude Code: [CLAUDE.md](CLAUDE.md).
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). How to verify it: [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 Verify everything with one command: `scripts/verify.sh --strict`.
 

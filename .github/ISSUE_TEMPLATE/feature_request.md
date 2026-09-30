@@ -8,4 +8,4 @@ labels: enhancement
 
 **Proposed solution**
 
-**Does it touch a security invariant?** (see CLAUDE.md section 5)
+**Does it touch a security invariant?** (see docs/VERIFICATION.md section 5)

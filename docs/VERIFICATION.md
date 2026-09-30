@@ -1,9 +1,9 @@
-# CLAUDE.md: instructions for Claude Code
+# Verification guide
 
-You are receiving **Allied Awaaz**, a hackathon product for the 5th Allied Bank Fintech Hackathon 2026
+For reviewers, judges and automated agents. You are receiving **Allied Awaaz**, a hackathon product for the 5th Allied Bank Fintech Hackathon 2026
 (theme: Agentic AI for Banking). Your job is to **set up the environment, run the full verification,
-and report whether the product meets its acceptance criteria.** Read `docs/FINAL_GUIDE.md` for the
-product itself; this file tells you how to verify it.
+and report whether the product meets its acceptance criteria.** Read [FINAL_GUIDE.md](FINAL_GUIDE.md) for the
+product itself; this file tells you how to verify it. All commands run from the repository root.
 
 ## 1. Rules
 
@@ -90,7 +90,7 @@ docker compose down
 | Console works on desktop and mobile with no browser errors | console-e2e |
 | Firmware builds for ESP32-S3 | firmware-build |
 
-**Manual (report as NOT VERIFIABLE BY CLAUDE CODE; do not mark passed):**
+**Manual (an automated reviewer reports these as NOT VERIFIABLE; do not mark passed):**
 1. Firmware running on physical hardware (bring-up checklist, FINAL_GUIDE section 8).
 2. Human-recorded Urdu voice clips replacing the espeak placeholders.
 3. Urdu speech-to-text accuracy on real shop recordings.

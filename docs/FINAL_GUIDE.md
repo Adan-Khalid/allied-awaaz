@@ -5,8 +5,8 @@ Theme: **Agentic AI for Banking** · Category: **Early Stage**
 
 This is the single document to read. It covers what the product is, how to run and verify it,
 how to demo it, how to bring up the hardware, and what remains manual.
-Deep technical design lives in [ARCHITECTURE.md](ARCHITECTURE.md). Instructions for an automated
-reviewer (Claude Code) live in [../CLAUDE.md](../CLAUDE.md).
+Deep technical design lives in [ARCHITECTURE.md](ARCHITECTURE.md). Verification rules, acceptance
+criteria and security invariants live in [VERIFICATION.md](VERIFICATION.md).
 
 ---
 
@@ -70,7 +70,7 @@ Bugs found and fixed during verification: seed data violated foreign keys on Pos
 shared one connection across requests; login lost input typed before hydration; the console signed users
 out on network blips instead of only on 401; the console polled before sign-in; missing favicon.
 
-**Reproduce:** `scripts/verify.sh --strict` (setup in CLAUDE.md section 2).
+**Reproduce:** `scripts/verify.sh --strict` (setup in [VERIFICATION.md](VERIFICATION.md) section 2).
 
 **Manual items that no automated test can prove** (section 11): firmware on physical hardware, recorded
 Urdu voice, Urdu speech-to-text accuracy, current hackathon rules.
