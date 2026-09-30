@@ -4,7 +4,7 @@
 Starts, on this machine:
   * a throwaway Mosquitto broker with the repo ACL and fresh passwords (if mosquitto is installed;
     otherwise the terminal uses its signed HTTPS polling fallback)
-  * the backend on :8000 (SQLite, demo data seeded, simulated gateway)
+  * the backend on :8000, or the next free port (SQLite, demo data seeded, simulated gateway)
   * the laptop terminal on http://127.0.0.1:8090 (screen, keypad, mic, speakers)
   * optionally the bank console on :3000 (--console)
 and opens the terminal in the browser. Ctrl+C stops everything.
@@ -140,7 +140,8 @@ def ensure_console_build(api: str) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--api", default="http://localhost:8000", help="backend URL")
+    ap.add_argument("--api", help="backend URL (default http://localhost:<port>)")
+    ap.add_argument("--port", type=int, default=8000, help="backend port; the next free one is used if busy")
     ap.add_argument("--no-backend", action="store_true", help="use an already running backend (e.g. docker compose)")
     ap.add_argument("--console", action="store_true", help="also start the bank console on :3000")
     ap.add_argument("--terminal-port", type=int, default=8090)
@@ -167,29 +168,35 @@ def main() -> None:
     print("Allied Awaaz laptop demo")
     try:
         if not a.no_backend:
-            for port in (8000, a.terminal_port):
-                if not port_free(port):
-                    raise SystemExit(f"port {port} is busy; stop what uses it or pass --no-backend")
+            if not port_free(a.port):
+                busy = a.port
+                a.port = next(p for p in range(a.port + 1, a.port + 50) if port_free(p))
+                print(f"  note      port {busy} is in use by another program; using {a.port}")
+            a.api = a.api or f"http://localhost:{a.port}"
+            if not port_free(a.terminal_port):
+                raise SystemExit(f"port {a.terminal_port} is busy; pass --terminal-port")
             if not a.no_mqtt:
                 mqtt = start_broker(stack, a.mqtt_port, backend_pw, device_pw)
                 print(f"  broker    {'127.0.0.1:%d (verified MQTT)' % a.mqtt_port if mqtt else 'not found, using signed HTTPS polling'}")
             env = {
                 "AWAAZ_DATABASE_URL": f"sqlite:///{(stack.work / 'awaaz.db').as_posix()}",
-                "AWAAZ_PUBLIC_BASE_URL": f"http://{ip}:8000",
+                "AWAAZ_PUBLIC_BASE_URL": f"http://{ip}:{a.port}",
                 "AWAAZ_CORS_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000",
                 "AWAAZ_MQTT_ENABLED": "true" if mqtt else "false",
                 "AWAAZ_MQTT_HOST": "127.0.0.1", "AWAAZ_MQTT_PORT": str(a.mqtt_port),
                 "AWAAZ_MQTT_PASSWORD": backend_pw,
                 "AWAAZ_DEMO_DEVICE_SECRET": device_secret,
             }
-            stack.start("backend", [PY, "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"],
+            stack.start("backend", [PY, "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", str(a.port)],
                         env, cwd=ROOT / "backend")
             if not wait_http(a.api + "/healthz", 90):
                 print(stack.tail("backend"))
                 raise SystemExit("backend did not start")
-            print(f"  backend   {a.api}  (payer links use http://{ip}:8000)")
-        elif not wait_http(a.api + "/healthz", 10):
-            raise SystemExit(f"no backend at {a.api}")
+            print(f"  backend   {a.api}  (payer links use http://{ip}:{a.port})")
+        else:
+            a.api = a.api or f"http://localhost:{a.port}"
+            if not wait_http(a.api + "/healthz", 10):
+                raise SystemExit(f"no backend at {a.api}")
 
         term_env = {"AWAAZ_API": a.api, "AWAAZ_TERMINAL_PORT": str(a.terminal_port),
                     "AWAAZ_DEMO_DEVICE_SECRET": device_secret}
