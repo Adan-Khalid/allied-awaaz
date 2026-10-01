@@ -101,7 +101,11 @@ class Device:
             self.on_status(a.txn, a.status, a.amount_minor, "mqtt")
 
     def poll_worker(self) -> None:
-        """Polling fallback when MQTT is not connected: the device's own signed status read."""
+        """The device's own signed status read for the QR on screen.
+
+        The firmware polls only while MQTT is down. A laptop sleeps and changes Wi-Fi far more
+        often, so here the signed read also runs while a QR is showing, as a backup to MQTT.
+        It is an authenticated HTTPS response (invariant 2), and announce_paid() de-duplicates."""
         import httpx
 
         while True:
@@ -110,8 +114,6 @@ class Device:
                 self.bank_ok = httpx.get(self.vt.api_base + "/healthz", timeout=3).status_code == 200
             except httpx.HTTPError:
                 self.bank_ok = False
-            if self.mqtt_connected():
-                continue
             txn = self.current_txn
             if not txn:
                 continue
@@ -163,6 +165,20 @@ class Confirm(BaseModel):
     run_id: str = Field(max_length=32)
 
 
+def _resubscribe_on_reconnect(vt: VirtualTerminal) -> None:
+    """paho reconnects by itself after sleep or a Wi-Fi change, but with clean_session the broker
+    forgets the subscription. Subscribe again and re-announce presence on every reconnect."""
+    client = vt._mqtt  # noqa: SLF001
+
+    def on_connect(c, userdata, flags, reason_code, properties=None):
+        if not reason_code.is_failure:
+            c.subscribe(f"awaaz/v1/dev/{vt.device_id}/evt", qos=1)
+            c.publish(f"awaaz/v1/dev/{vt.device_id}/status", "online", qos=1, retain=True)
+            print("[terminal] MQTT (re)connected; subscribed to payment events")
+
+    client.on_connect = on_connect
+
+
 async def _startup() -> None:
     dev.loop = asyncio.get_running_loop()
     try:
@@ -180,6 +196,7 @@ async def _startup() -> None:
         try:
             dev.vt.connect_mqtt()
             dev.mqtt_mode = True
+            _resubscribe_on_reconnect(dev.vt)
             print(f"[terminal] MQTT connected to {dev.vt.mqtt_host}:{dev.vt.mqtt_port}")
         except Exception as exc:  # noqa: BLE001
             print(f"[terminal] MQTT unavailable ({exc}); using signed HTTPS polling")
