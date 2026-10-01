@@ -72,3 +72,5 @@ jobs:
           cat demo.log
       - name: Smoke test
         run: python scripts/smoke_laptop_terminal.py
+      - name: Raast QR tests
+        run: python -m pytest tools/laptop_terminal -q

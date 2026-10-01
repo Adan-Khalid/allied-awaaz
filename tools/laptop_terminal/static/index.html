@@ -21,6 +21,7 @@
     :root { --page: #0e1412; --page-2: #141c19; --card: #18201d; --ink: #e8efeb; --muted: #9aaba2; --line: #2a3531; --brand-tint: #123a26; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; }
   body {
     font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased;
@@ -190,6 +191,22 @@
   .row { display: flex; gap: 8px; margin-top: 10px; }
   .row .btn { flex: 1; }
 
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--page); border: 1px solid var(--line); }
+  .seg button { height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .raast-box { margin-top: 12px; border: 1px dashed var(--line); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.5; }
+  .raast-box .acct { font-weight: 600; }
+  .linkbtn { background: none; border: 0; color: var(--bad); font: 600 12.5px var(--font); cursor: pointer; padding: 0; margin-left: 8px; }
+  .upload { display: inline-flex; margin-top: 10px; }
+  .upload input { display: none; }
+  .err { color: var(--bad); font-size: 12.5px; margin-top: 6px; min-height: 16px; }
+  .qr-card { position: relative; }
+  .qr-badge { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); background: #0b4f8a; color: #fff; font: 700 10px var(--font); letter-spacing: 1px; padding: 3px 8px; border-radius: 999px; display: none; }
+  #qr.raast .qr-badge { display: block; }
+  #qr.raast .qr-progress, #qr.raast .qr-ttl, #qr.raast .qr-ref { display: none; }
+  .qr-manual { display: none; margin-top: 12px; width: 100%; border-radius: 10px; background: #eef5fb; color: #0b4f8a; font-size: 12px; padding: 8px 10px; text-align: center; line-height: 1.45; }
+  #qr.raast .qr-manual { display: block; }
+
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .tick path { stroke-dashoffset: 0; } }
   @media (max-width: 860px) { body { overflow: auto; align-items: flex-start; } .stage { flex-direction: column; gap: 20px; } }
 </style>
@@ -223,10 +240,11 @@
         <section class="view" id="qr">
           <div class="qr-amount" id="qrAmt">PKR 0</div>
           <div class="qr-sub" id="qrSub">Customer QR scan karein</div>
-          <div class="qr-card"><img id="qrImg" alt="Payment QR code"></div>
+          <div class="qr-card"><span class="qr-badge">RAAST</span><img id="qrImg" alt="Payment QR code"></div>
           <div class="qr-ref" id="qrRef"></div>
           <div class="qr-progress"><i id="qrBar"></i></div>
           <div class="qr-ttl" id="qrTtl"></div>
+          <div class="qr-manual">Payment seedha aap ke account mein jayegi.<br><b>Apne bank app mein check karein</b> &middot; * = band karein</div>
         </section>
 
         <section class="view" id="paid">
@@ -289,9 +307,22 @@
     </div>
 
     <div class="card">
-      <h2>Customer's phone</h2>
-      <p class="note" style="margin-top:0">Scan the QR with the <b>phone camera</b> (same Wi-Fi). It opens the <b>simulated</b> payment page. Banking apps like NayaPay won't accept it: this demo does not move real money.</p>
-      <div class="row">
+      <h2>Payment QR</h2>
+      <div class="seg" role="group" aria-label="QR type">
+        <button id="modeDemo" aria-pressed="true">Demo</button>
+        <button id="modeRaast" aria-pressed="false">Raast (bank app)</button>
+      </div>
+      <p class="note" id="noteDemo">Scan with the <b>phone camera</b> (same Wi-Fi). Opens the <b>simulated</b> payment page and the terminal confirms automatically. No real money.</p>
+      <p class="note" id="noteRaast" hidden>Customer scans with <b>any banking app</b> (NayaPay, ABL, JazzCash&hellip;). Your account and the amount are pre-filled. <b>Real money</b> goes straight to your account. The terminal <b>cannot confirm</b> it: check your bank app.</p>
+      <div class="raast-box" id="raastBox" hidden>
+        <div id="raastSet" hidden>Raast account: <span class="acct" id="raastAcct"></span><button class="linkbtn" id="raastRemove">Remove</button></div>
+        <div id="raastUnset">
+          One-time setup: open your bank app, show your <b>Raast QR</b>, take a screenshot, and upload it here. It is read on this laptop and stays here.
+          <div><label class="btn ghost upload">Upload Raast QR screenshot<input type="file" id="raastFile" accept="image/*"></label></div>
+        </div>
+        <div class="err" id="raastErr"></div>
+      </div>
+      <div class="row" id="demoRow">
         <a class="btn ghost" id="payLink" href="#" target="_blank" rel="noopener" aria-disabled="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
           Open payment page here
@@ -314,6 +345,7 @@
   </aside>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 "use strict";
 // Mirrors firmware/src/main.cpp: IDLE, SHOW_QR, CONFIRM, MESSAGE. This page only draws the screen
@@ -360,6 +392,41 @@ function nextClip() {
 function speak(clips) { lastSpoken = clips || []; playClips(lastSpoken); }
 
 // ---------------------------------------------------------------- screens (firmware/src/ui.cpp)
+// ---------------------------------------------------------------- QR type: demo (auto-confirm) or the merchant's Raast QR
+let qrMode = "demo", raast = { configured: false };
+try { qrMode = localStorage.getItem("awaaz-qr-mode") || "demo"; } catch {}
+function renderQrMode() {
+  $("modeDemo").setAttribute("aria-pressed", String(qrMode === "demo"));
+  $("modeRaast").setAttribute("aria-pressed", String(qrMode === "raast"));
+  $("noteDemo").hidden = qrMode !== "demo"; $("demoRow").hidden = qrMode !== "demo";
+  $("noteRaast").hidden = qrMode !== "raast"; $("raastBox").hidden = qrMode !== "raast";
+  $("raastSet").hidden = !raast.configured; $("raastUnset").hidden = !!raast.configured;
+  if (raast.configured) $("raastAcct").textContent = [raast.merchant, raast.account_hint].filter(Boolean).join(" \u00b7 ");
+  fit();
+}
+function setMode(m) { qrMode = m; try { localStorage.setItem("awaaz-qr-mode", m); } catch {} renderQrMode(); }
+$("modeDemo").addEventListener("click", () => setMode("demo"));
+$("modeRaast").addEventListener("click", () => setMode("raast"));
+async function loadRaast() { try { raast = await (await fetch("/api/raast")).json(); } catch {} renderQrMode(); }
+$("raastRemove").addEventListener("click", async () => { raast = await (await fetch("/api/raast", { method: "DELETE" })).json(); renderQrMode(); });
+$("raastFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0]; e.target.value = ""; $("raastErr").textContent = "";
+  if (!file) return;
+  try {
+    if (!window.jsQR) throw new Error("QR reader did not load (needs internet once).");
+    const img = await createImageBitmap(file);
+    const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0, c.width, c.height);
+    const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+    if (!code) throw new Error("No QR found in that image. Crop closer to the QR and try again.");
+    const res = await fetch("/api/raast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ payload: code.data }) });
+    const j = await res.json();
+    if (!res.ok) throw new Error(typeof j.detail === "string" ? j.detail : "That QR was not accepted.");
+    raast = j; renderQrMode();
+  } catch (err) { $("raastErr").textContent = err.message; }
+});
+
 function setPayLink(url) {
   const a = $("payLink");
   if (url) { a.href = url; a.setAttribute("aria-disabled", "false"); }
@@ -388,15 +455,19 @@ function showMessage(title, body, tone = "info", ms = 8000) {
   show("result");
   clearTimeout(messageTimer); messageTimer = setTimeout(goIdle, ms);
 }
-function showQr(action, clips, svg) {
+function showQr(action, clips, svg, raastSvg) {
   state = S.SHOW_QR; busy("");
+  const useRaast = qrMode === "raast" && !!raastSvg;
+  if (qrMode === "raast" && !raastSvg) $("raastErr").textContent = "Upload your Raast QR first. Showing the demo QR for now.";
+  $("qr").classList.toggle("raast", useRaast);
   $("qrAmt").textContent = pkr(action.amount_rupees);
-  $("qrSub").textContent = "Customer QR scan karein";
-  $("qrImg").src = svg;
+  $("qrSub").textContent = useRaast ? "Kisi bhi bank app se scan karein" : "Customer QR scan karein";
+  $("qrImg").src = useRaast ? raastSvg : svg;
   $("qrRef").textContent = "REF " + (action.reference || "");
-  setPayLink(action.qr_payload);
+  setPayLink(useRaast ? "" : action.qr_payload);
   qrShownAt = Date.now();
   show("qr");
+  if (useRaast) { clearInterval(qrTimer); speak(clips); return; }   // no expiry and no auto-confirm for real Raast
   const tick = () => {
     const left = Math.max(0, ttl - Math.floor((Date.now() - qrShownAt) / 1000));
     $("qrTtl").textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} baqi`;
@@ -421,7 +492,7 @@ function thinking() { state = S.BUSY; busy("Bank se check ho raha hai…"); }
 function handleAgent(r) {
   const action = r.action || {};
   const clips = (r.speech && r.speech.clips) || [];
-  if (action.type === "show_qr") return showQr(action, clips, r.qr_svg);
+  if (action.type === "show_qr") return showQr(action, clips, r.qr_svg, r.raast_svg);
   if (action.type === "confirm_amount") {
     pendingRunId = action.run_id; state = S.CONFIRM; busy("");
     $("confAmt").textContent = pkr(action.amount_rupees);
@@ -620,7 +691,7 @@ function connectEvents() {
     merchant = s.merchant; ttl = s.payment_ttl_s;
     document.title = `${s.merchant} · Allied Awaaz`;
   } catch {}
-  goIdle(); connectEvents();
+  goIdle(); connectEvents(); loadRaast();
   $("clock").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   fit(); if (document.fonts) document.fonts.ready.then(fit);
 })();

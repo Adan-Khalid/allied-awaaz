@@ -44,6 +44,12 @@ CLIPS = ROOT / "firmware" / "data" / "clips"
 sys.path.insert(0, str(ROOT / "tools"))
 from virtual_terminal import VirtualTerminal, from_env, payment_received_clips  # noqa: E402
 
+sys.path.insert(0, str(HERE))
+import raast_qr  # noqa: E402
+
+# The merchant's own bank-issued Raast QR payload. Stays on this laptop (git-ignored).
+RAAST_FILE = HERE / "raast_qr.local.txt"
+
 POLL_S = 3.0          # same cadence as the firmware's polling fallback
 _CLIP_NAME = re.compile(r"^[a-z0-9_]{1,48}$")
 
@@ -63,6 +69,14 @@ class Device:
         self.lock = threading.Lock()
         self.subscribers: set[asyncio.Queue] = set()
         self.loop: asyncio.AbstractEventLoop | None = None
+        self.raast_base = os.getenv("AWAAZ_RAAST_QR", "").strip() or (
+            RAAST_FILE.read_text(encoding="utf-8").strip() if RAAST_FILE.is_file() else "")
+        if self.raast_base:
+            try:
+                raast_qr.validate(self.raast_base)
+            except raast_qr.RaastQrError as exc:
+                print(f"[terminal] ignoring saved Raast QR: {exc}")
+                self.raast_base = ""
 
     # ------------------------------------------------------------ events to the screen
     def emit(self, event: dict) -> None:
@@ -145,6 +159,9 @@ class Device:
                 self.current_ref = action.get("reference", "")
             qr = segno.make(action.get("qr_payload", ""), error="l")
             r["qr_svg"] = qr.svg_data_uri(scale=6, border=2, dark="#000", light="#fff")
+            if self.raast_base:
+                payload = raast_qr.with_amount(self.raast_base, int(action.get("amount_rupees", 0)))
+                r["raast_svg"] = segno.make(payload, error="m").svg_data_uri(scale=6, border=2, dark="#000", light="#fff")
         return r
 
 
@@ -163,6 +180,10 @@ class Amount(BaseModel):
 
 class Confirm(BaseModel):
     run_id: str = Field(max_length=32)
+
+
+class RaastBase(BaseModel):
+    payload: str = Field(min_length=20, max_length=512)
 
 
 def _resubscribe_on_reconnect(vt: VirtualTerminal) -> None:
@@ -260,6 +281,36 @@ async def voice(request: Request):
         return dev.vt._ok(dev.vt.request("POST", "/v1/device/voice", raw=wav, content_type="audio/wav"))  # noqa: SLF001
 
     return await asyncio.to_thread(dev.call, send)
+
+
+def _raast_info() -> dict:
+    if not dev.raast_base:
+        return {"configured": False}
+    return {"configured": True, **raast_qr.validate(dev.raast_base)}
+
+
+@app.get("/api/raast")
+def raast_get():
+    return _raast_info()
+
+
+@app.post("/api/raast")
+def raast_set(body: RaastBase):
+    """Saves the merchant's bank-issued Raast QR (decoded in the browser from their screenshot)."""
+    try:
+        raast_qr.validate(body.payload)
+    except raast_qr.RaastQrError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    RAAST_FILE.write_text(body.payload.strip(), encoding="utf-8")
+    dev.raast_base = body.payload.strip()
+    return _raast_info()
+
+
+@app.delete("/api/raast")
+def raast_clear():
+    RAAST_FILE.unlink(missing_ok=True)
+    dev.raast_base = ""
+    return {"configured": False}
 
 
 @app.post("/api/cancel")

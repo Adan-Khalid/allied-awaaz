@@ -86,6 +86,23 @@ message or its own signed status read, exactly like the firmware. The browser pa
 plays sound, and it listens on `127.0.0.1` only. QR links use the laptop's LAN IP, so a phone on the
 same Wi-Fi can scan and pay on the simulated payer page.
 
+### QR types: Demo or Raast
+
+The **Payment QR** switch in the terminal's demo tools picks what the customer scans:
+
+| | Demo (default) | Raast (bank app) |
+|---|---|---|
+| Customer scans with | phone camera | any Pakistani banking app |
+| Money | none (simulated payer page) | **real**, straight to the merchant's account |
+| Terminal confirms "payment received" | yes, from the bank-signed event | **no**: the merchant checks their bank app |
+
+Raast mode starts from the merchant's **own bank-issued Raast QR**: take a screenshot of it in your
+bank app and upload it once in the terminal. It is decoded in the browser and kept only on the laptop
+(`tools/laptop_terminal/raast_qr.local.txt`, git-ignored). For each sale the terminal copies the
+account part unchanged, sets the amount (EMVCo tag 54, dynamic QR) and recomputes the checksum, so
+the customer's app opens with the shop's account and amount pre-filled. Allied Awaaz receives no
+notification for these payments, so it never announces them; that needs a bank integration (pilot).
+
 To point the terminal at a stack you already run (for example `docker compose up`):
 `python scripts/laptop_demo.py --no-backend --api http://localhost:8000`.
 
